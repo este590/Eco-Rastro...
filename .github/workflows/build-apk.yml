@@ -1,5 +1,5 @@
 
-name: Construir APK ECO-RASTRO
+name: ECO-RASTRO - Generar APK
 
 on:
   workflow_dispatch:
@@ -14,40 +14,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Descargar proyecto
+      - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Instalar Java 17
+      - name: Configurar Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Preparar Gradle
+      - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Buscar proyecto Android
+      - name: Preparar proyecto
         run: |
-          PROJECT_FILE=$(find . -name settings.gradle.kts -o -name settings.gradle | head -n 1)
-          if [ -z "$PROJECT_FILE" ]; then
-            echo "No se encontró el proyecto Android."
-            find . -maxdepth 4 -type f
+          if [ -f "Eco-Rastro-GitHub-Android.zip" ]; then
+            unzip -q "Eco-Rastro-GitHub-Android.zip" -d proyecto
+          else
+            mkdir -p proyecto
+            cp -R . proyecto/
+          fi
+
+      - name: Encontrar proyecto
+        run: |
+          FILE=$(find proyecto -type f \( -name settings.gradle.kts -o -name settings.gradle \) | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "ERROR: No se encontró settings.gradle"
+            find proyecto -maxdepth 4 -type f
             exit 1
           fi
-          PROJECT_DIR=$(dirname "$PROJECT_FILE")
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Proyecto encontrado en: $PROJECT_DIR"
+          DIR=$(dirname "$FILE")
+          echo "PROJECT_DIR=$DIR" >> "$GITHUB_ENV"
 
-      - name: Compilar aplicación
+      - name: Compilar APK
         run: gradle -p "$PROJECT_DIR" assembleDebug --no-daemon
 
       - name: Guardar APK
         uses: actions/upload-artifact@v4
         with:
           name: ECO-RASTRO-APK
-          path: '**/build/outputs/apk/debug/*.apk'
+          path: proyecto/**/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 30
           
