@@ -28,20 +28,26 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Verificar proyecto
+      - name: Buscar proyecto Android
         run: |
-          ls -la
-          test -f settings.gradle.kts
+          PROJECT_FILE=$(find . -name settings.gradle.kts -o -name settings.gradle | head -n 1)
+          if [ -z "$PROJECT_FILE" ]; then
+            echo "No se encontró el proyecto Android."
+            find . -maxdepth 4 -type f
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$PROJECT_FILE")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Proyecto encontrado en: $PROJECT_DIR"
 
       - name: Compilar aplicación
-        run: gradle assembleDebug --no-daemon
+        run: gradle -p "$PROJECT_DIR" assembleDebug --no-daemon
 
       - name: Guardar APK
         uses: actions/upload-artifact@v4
         with:
           name: ECO-RASTRO-APK
-          path: app/build/outputs/apk/debug/*.apk
+          path: '**/build/outputs/apk/debug/*.apk'
           if-no-files-found: error
           retention-days: 30
-
           
